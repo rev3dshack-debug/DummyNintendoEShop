@@ -22,20 +22,37 @@ jobs:
           g++ -std=c++11 -DVERSION_MAJOR=1 -DVERSION_MINOR=2 -DVERSION_MICRO=0 -Ibannertool/source $(find bannertool/source -name "*.cpp" -o -name "*.c") -lpng -lz -o /usr/local/bin/bannertool
       - name: Convert Bottom.png
         run: |
-          mkdir -p data
-          python3 -c '
-          from PIL import Image
-          img = Image.open("Bottom.png").convert("RGB").resize((320, 240))
-          img = img.rotate(-90, expand=True)
-          with open("data/bottom.bin", "wb") as f:
-              for y in range(img.height):
-                  for x in range(img.width):
-                      r, g, b = img.getpixel((x, y))
-                      f.write(bytes([b, g, r]))
-          '
-      - name: Build CIA
+          mkdir -p build
+          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); open("build/bottom.bin", "wb").write(b"".join(bytes([img.getpixel((x, y)), img.getpixel((x, y)), img.getpixel((x, y))]) for y in range(img.height) for x in range(img.width)))'
+      - name: Build ELF and CIA
         run: |
-          make
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
+          $DEVKITARM/bin/bin2s build/bottom.bin > build/bottom_bin.s
+          $DEVKITARM/bin/arm-none-eabi-gcc -c build/bottom_bin.s -o build/bottom_bin.o
+          cat << 'SRC' > build/main.c
+          #include <3ds.h>
+          #include <string.h>
+          extern const u8 bottom_bin[];
+          extern const u32 bottom_bin_size;
+          int main(void) {
+              gfxInitDefault();
+              gfxSetDoubleBuffering(GFX_BOTTOM, false);
+              u8* fb = gfxGetFramebuffer(GFX_BOTTOM, GFX_LEFT, NULL, NULL);
+              if (bottom_bin_size <= 320 * 240 * 3) memcpy(fb, bottom_bin, bottom_bin_size);
+              gfxFlushBuffers();
+              gfxSwapBuffers();
+              gspWaitForVBlank();
+              while (aptMainLoop()) {
+                  hidScanInput();
+                  if (hidKeysDown() & KEY_START) break;
+                  gspWaitForVBlank();
+              }
+              gfxExit();
+              return 0;
+          }
+          SRC
+          $DEVKITARM/bin/arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.o -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
           bannertool makebanner -i DummyBanner.png -o banner.bin
           bannertool makesmdh -s "DummyNintendoEShop" -l "DummyNintendoEShop" -p "Nintendo" -i DummyIcon.png -o icon.icn
           makerom -f cia -o DummyNintendoEShop.cia -elf DummyNintendoEShop.elf -rsf cia.rsf -banner banner.bin -icon icon.icn
