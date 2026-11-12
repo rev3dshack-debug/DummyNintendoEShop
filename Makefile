@@ -1,5 +1,5 @@
 ifeq ($(strip $(DEVKITARM)),)
-$(error "Please set DEVKITARM in your environment.")
+$(error "Please set DEVKITARM")
 endif
 include $(DEVKITARM)/3ds_rules
 TARGET := DummyNintendoEShop
@@ -30,16 +30,16 @@ export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 .PHONY: $(BUILD) clean all
 all: $(BUILD)
 $(BUILD):
-@[ -d $@ ] || mkdir -p $@
-@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@[ -d $@ ] || mkdir -p $@
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 clean:
-@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).3dsx $(TARGET).elf
 else
 DEPENDS := $(OFILES:.o=.d)
 $(OUTPUT).3dsx : $(OUTPUT).elf
 $(OFILES_SRC) : $(HFILES)
 $(OUTPUT).elf : $(OFILES)
 %.bin.o %_bin.h : %.bin
-@$(bin2o)
+	@$(bin2o)
 -include $(DEPENDS)
 endif
