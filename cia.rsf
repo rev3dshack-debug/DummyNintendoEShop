@@ -1,0 +1,42 @@
+BasicInfo:
+  Title                   : "DummyNintendoEShop"
+  CompanyCode             : "00"
+  ProductCode             : "CTR-P-DMY1"
+  ContentType             : Application
+  Logo                    : Homebrew
+TitleInfo:
+  UniqueId                : 0xF8001
+  Category                : Application
+Option:
+  UseOnSD                 : true
+  EnableCompress          : true
+  FreeProductCode         : true
+  EnableCrypt             : false
+  MediaFootPadding        : false
+AccessControlInfo:
+  CoreVersion             : 2
+  DescVersion             : 2
+  ReleaseKernelMajor      : "02"
+  ReleaseKernelMinor      : "33"
+  UseExtSaveData          : false
+  MemoryType              : Application
+  SystemMode              : 64MB
+  IdealProcessor          : 0
+  AffinityMask            : 1
+  Priority                : 16
+  MaxCpu                  : 0x9E
+  DisableDebug            : false
+  EnableForceDebug        : false
+  CanWriteSharedPage      : false
+  CanUsePrivilegedPriority: false
+  CanUseNonAlphabetAndNumber: true
+  PermitMainFunctionArgument: true
+  CanShareDeviceMemory    : false
+  RunnableOnSleep         : false
+  SpecialMemoryArrange    : false
+  ResourceLimitCategory   : APPLICATION
+SystemControlInfo:
+  SaveDataSize: 0KB
+  RemasterVersion: 0
+  StackSize: 0x40000
+  JumpId: 0x000400000F800100L
