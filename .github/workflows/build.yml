@@ -13,10 +13,11 @@ jobs:
         run: apt-get update && apt-get install -y python3 python3-pil git cmake build-essential libpng-dev zlib1g-dev
       - name: Build bannertool and makerom
         run: |
-          git clone https://github.com
+          U="https://github.com"
+          git clone "$U/3DSGuy/Project_CTR.git"
           make -C Project_CTR/makerom -j4
           cp Project_CTR/makerom/bin/makerom /usr/local/bin/
-          git clone https://github.com
+          git clone "$U/Epicpkmn11/bannertool.git"
           mkdir -p bannertool/output
           g++ -std=c++11 -DVERSION_MAJOR=1 -DVERSION_MINOR=2 -DVERSION_MICRO=0 -Ibannertool/source $(find bannertool/source -name "*.cpp" -o -name "*.c") -lpng -lz -o /usr/local/bin/bannertool
       - name: Convert Bottom.png
