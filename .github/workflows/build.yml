@@ -23,7 +23,7 @@ jobs:
       - name: Convert Bottom.png
         run: |
           mkdir -p build
-          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); open("build/bottom.bin", "wb").write(b"".join(bytes([img.getpixel((x, y)), img.getpixel((x, y)), img.getpixel((x, y))]) for y in range(img.height) for x in range(img.width)))'
+          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); open("build/bottom.bin", "wb").write(b"".join(bytes([p[2], p[1], p[0]]) for p in img.getdata()))'
       - name: Build ELF and CIA
         run: |
           export DEVKITPRO=/opt/devkitpro
