@@ -20,10 +20,10 @@ jobs:
           git clone "$U/Epicpkmn11/bannertool.git"
           mkdir -p bannertool/output
           g++ -std=c++11 -DVERSION_MAJOR=1 -DVERSION_MINOR=2 -DVERSION_MICRO=0 -Ibannertool/source $(find bannertool/source -name "*.cpp" -o -name "*.c") -lpng -lz -o /usr/local/bin/bannertool
-      - name: Convert Bottom.png and create silent audio
+      - name: Prepare images and silent audio
         run: |
           mkdir -p build
-          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); raw = b"".join(bytes([b, g, r]) for r, g, b in img.getdata()); open("build/bottom_bin.c", "w").write("const unsigned char bottom_bin[] = {" + ",".join(map(str, raw)) + "};\nconst unsigned int bottom_bin_size = " + str(len(raw)) + ";\n")'
+          python3 -c 'from PIL import Image; Image.open("DummyIcon.png").convert("RGBA").resize((48, 48)).save("build/icon48.png"); Image.open("DummyBanner.png").convert("RGBA").resize((256, 128)).save("build/banner256.png"); img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); raw = b"".join(bytes([b, g, r]) for r, g, b in img.getdata()); open("build/bottom_bin.c", "w").write("const unsigned char bottom_bin[] = {" + ",".join(map(str, raw)) + "};\nconst unsigned int bottom_bin_size = " + str(len(raw)) + ";\n")'
           python3 -c 'import wave; w = wave.open("build/silent.wav", "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050); w.writeframes(b"\x00\x00" * 2205); w.close()'
       - name: Build ELF and CIA
         run: |
@@ -52,8 +52,8 @@ jobs:
           }
           SRC
           $DEVKITARM/bin/arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.c -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
-          bannertool makebanner -i DummyBanner.png -a build/silent.wav -o banner.bin
-          bannertool makesmdh -s "DummyNintendoEShop" -l "DummyNintendoEShop" -p "Nintendo" -i DummyIcon.png -o icon.icn
+          bannertool makebanner -i build/banner256.png -a build/silent.wav -o banner.bin
+          bannertool makesmdh -s "DummyNintendoEShop" -l "DummyNintendoEShop" -p "Nintendo" -i build/icon48.png -o icon.icn
           makerom -f cia -o DummyNintendoEShop.cia -elf DummyNintendoEShop.elf -rsf cia.rsf -banner banner.bin -icon icon.icn
       - uses: actions/upload-artifact@v4
         with:
