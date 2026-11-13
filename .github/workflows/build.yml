@@ -20,16 +20,14 @@ jobs:
           git clone "$U/Epicpkmn11/bannertool.git"
           mkdir -p bannertool/output
           g++ -std=c++11 -DVERSION_MAJOR=1 -DVERSION_MINOR=2 -DVERSION_MICRO=0 -Ibannertool/source $(find bannertool/source -name "*.cpp" -o -name "*.c") -lpng -lz -o /usr/local/bin/bannertool
-      - name: Convert Bottom.png
+      - name: Convert Bottom.png to C array
         run: |
           mkdir -p build
-          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); open("build/bottom.bin", "wb").write(b"".join(bytes([p[2], p[1], p[0]]) for p in img.getdata()))'
+          python3 -c 'from PIL import Image; img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); raw = b"".join(bytes([b, g, r]) for r, g, b in img.getdata()); open("build/bottom_bin.c", "w").write("const unsigned char bottom_bin[] = {" + ",".join(map(str, raw)) + "};\nconst unsigned int bottom_bin_size = " + str(len(raw)) + ";\n")'
       - name: Build ELF and CIA
         run: |
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
-          $DEVKITARM/bin/bin2s build/bottom.bin > build/bottom_bin.s
-          $DEVKITARM/bin/arm-none-eabi-gcc -c build/bottom_bin.s -o build/bottom_bin.o
           cat << 'SRC' > build/main.c
           #include <3ds.h>
           #include <string.h>
@@ -52,7 +50,7 @@ jobs:
               return 0;
           }
           SRC
-          $DEVKITARM/bin/arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.o -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
+          $DEVKITARM/bin/arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.c -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
           bannertool makebanner -i DummyBanner.png -o banner.bin
           bannertool makesmdh -s "DummyNintendoEShop" -l "DummyNintendoEShop" -p "Nintendo" -i DummyIcon.png -o icon.icn
           makerom -f cia -o DummyNintendoEShop.cia -elf DummyNintendoEShop.elf -rsf cia.rsf -banner banner.bin -icon icon.icn
