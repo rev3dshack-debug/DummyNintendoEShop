@@ -20,16 +20,16 @@ jobs:
           git clone "$U/Epicpkmn11/bannertool.git"
           mkdir -p bannertool/output
           g++ -std=c++11 -DVERSION_MAJOR=1 -DVERSION_MINOR=2 -DVERSION_MICRO=0 -Ibannertool/source $(find bannertool/source -name "*.cpp" -o -name "*.c") -lpng -lz -o /usr/local/bin/bannertool
-      - name: Prepare images, audio, and RSF
+      - name: Prepare images and silent audio
         run: |
           mkdir -p build
           python3 -c 'from PIL import Image; Image.open("DummyIcon.png").convert("RGBA").resize((48, 48)).save("build/icon48.png"); Image.open("DummyBanner.png").convert("RGBA").resize((256, 128)).save("build/banner256.png"); img = Image.open("Bottom.png").convert("RGB").resize((320, 240)).rotate(-90, expand=True); raw = b"".join(bytes([b, g, r]) for r, g, b in img.getdata()); open("build/bottom_bin.c", "w").write("const unsigned char bottom_bin[] = {" + ",".join(map(str, raw)) + "};\nconst unsigned int bottom_bin_size = " + str(len(raw)) + ";\n")'
           python3 -c 'import wave; w = wave.open("build/silent.wav", "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050); w.writeframes(b"\x00\x00" * 2205); w.close()'
-          python3 -c 'rsf = "BasicInfo:\n  Title: \"DummyNintendoEShop\"\n  CompanyCode: \"00\"\n  ProductCode: \"CTR-P-DMY1\"\n  ContentType: Application\n  Logo: None\nTitleInfo:\n  UniqueId: 0xF9123\n  Category: Application\nOption:\n  UseOnSD: true\n  EnableCompress: true\n  FreeProductCode: true\n  EnableCrypt: false\n  MediaFootPadding: false\nAccessControlInfo:\n  CoreVersion: 2\n  DescVersion: 2\n  ReleaseKernelMajor: \"02\"\n  ReleaseKernelMinor: \"33\"\n  UseExtSaveData: false\n  MemoryType: Application\n  SystemMode: 64MB\n  IdealProcessor: 0\n  AffinityMask: 1\n  Priority: 16\n  MaxCpu: 0x9E\n  DisableDebug: false\n  EnableForceDebug: false\n  CanWriteSharedPage: false\n  CanUsePrivilegedPriority: false\n  CanUseNonAlphabetAndNumber: true\n  PermitMainFunctionArgument: true\n  CanShareDeviceMemory: false\n  RunnableOnSleep: false\n  SpecialMemoryArrange: false\n  ResourceLimitCategory: APPLICATION\n  HandleTableSize: 0x200\n  SystemCallAccess:\n    ControlMemory: 1\n    QueryMemory: 2\n    ExitProcess: 3\n    GetProcessAffinityMask: 4\n    SetProcessAffinityMask: 5\n    GetProcessIdealProcessor: 6\n    SetProcessIdealProcessor: 7\n    CreateThread: 8\n    ExitThread: 9\n    SleepThread: 10\n    GetThreadPriority: 11\n    SetThreadPriority: 12\n    GetThreadAffinityMask: 13\n    SetThreadAffinityMask: 14\n    GetThreadIdealProcessor: 15\n    SetThreadIdealProcessor: 16\n    GetCurrentProcessorNumber: 17\n    Run: 18\n    CreateMutex: 19\n    ReleaseMutex: 20\n    CreateSemaphore: 21\n    ReleaseSemaphore: 22\n    CreateEvent: 23\n    SignalEvent: 24\n    ClearEvent: 25\n    CreateTimer: 26\n    SetTimer: 27\n    CancelTimer: 28\n    ClearTimer: 29\n    CreateMemoryBlock: 30\n    MapMemoryBlock: 31\n    UnmapMemoryBlock: 32\n    CreateAddressArbiter: 33\n    ArbitrateAddress: 34\n    CloseHandle: 35\n    WaitSynchronization1: 36\n    WaitSynchronizationN: 37\n    SignalAndDrain: 38\n    DuplicateHandle: 39\n    GetSystemTick: 40\n    GetHandleInfo: 41\n    GetSystemInfo: 42\n    GetProcessInfo: 43\n    GetThreadInfo: 44\n    ConnectToPort: 45\n    SendSyncRequest1: 46\n    SendSyncRequest2: 47\n    SendSyncRequest3: 48\n    SendSyncRequest4: 49\n    SendSyncRequest: 50\n    OpenProcess: 51\n    OpenThread: 52\n    GetProcessId: 53\n    GetProcessIdOfThread: 54\n    GetThreadId: 55\n    GetResourceLimit: 56\n    GetResourceLimitLimitValues: 57\n    GetResourceLimitCurrentValues: 58\n    GetThreadContext: 59\n    Break: 60\n    OutputDebugString: 61\n  ServiceAccessControl:\n    - APT:U\n    - ac:u\n    - am:net\n    - boss:U\n    - cam:u\n    - cecd:u\n    - cfg:u\n    - csnd:SND\n    - dsp::DSP\n    - frd:u\n    - fs:USER\n    - gsp::Gpu\n    - gsp::Lcd\n    - hid:USER\n    - http:C\n    - ir:rst\n    - ir:u\n    - mic:u\n    - ndm:u\n    - news:u\n    - nfc:u\n    - nim:aoc\n    - nwm::UDS\n    - ptm:u\n    - pxi:dev\n    - soc:U\n    - ssl:C\n    - y2r:u\nSystemControlInfo:\n  SaveDataSize: 128KB\n  RemasterVersion: 0\n  StackSize: 0x40000\n  JumpId: 0x000400000F912300L\n"; open("build/app.rsf", "w").write(rsf)'
-      - name: Build ELF and CIA
+      - name: Build 3DSX, CXI, and CIA
         run: |
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=/opt/devkitpro/devkitARM
+          export PATH=$DEVKITPRO/tools/bin:$DEVKITARM/bin:$PATH
           cat << 'SRC' > build/main.c
           #include <3ds.h>
           #include <string.h>
@@ -52,10 +52,12 @@ jobs:
               return 0;
           }
           SRC
-          $DEVKITARM/bin/arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.c -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
+          arm-none-eabi-gcc -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft -O2 -D__3DS__ -I$DEVKITPRO/libctru/include -specs=3dsx.specs build/main.c build/bottom_bin.c -L$DEVKITPRO/libctru/lib -lctru -lm -o DummyNintendoEShop.elf
           bannertool makebanner -i build/banner256.png -a build/silent.wav -o banner.bin
           bannertool makesmdh -s "DummyNintendoEShop" -l "DummyNintendoEShop" -p "Nintendo" -i build/icon48.png -o icon.icn
-          makerom -f cia -o DummyNintendoEShop.cia -elf DummyNintendoEShop.elf -rsf build/app.rsf -banner banner.bin -icon icon.icn -major 1 -minor 1 -micro 0
+          3dsxtool DummyNintendoEShop.elf DummyNintendoEShop.3dsx --smdh=icon.icn
+          cxitool DummyNintendoEShop.3dsx DummyNintendoEShop.cxi --titleid=000400000F955500 --name="DummyNintendoEShop" --productcode="CTR-P-DMY1"
+          makerom -f cia -o DummyNintendoEShop.cia -cxi DummyNintendoEShop.cxi -banner banner.bin -major 1 -minor 0 -micro 0
       - uses: actions/upload-artifact@v4
         with:
           name: DummyNintendoEShop-CIA
